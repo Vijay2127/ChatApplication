@@ -1,6 +1,8 @@
+import bcrypt from "bcryptjs";
 import { generateToken } from "../lib/utilis.js";
 import User from "../models/user.model.js";
 import bcryptjs from 'bcryptjs';
+import cloudinary from "../lib/cloudinary.js";
 export const signup=async (req,res)=>{
     const {fullname,email,password}=req.body; 
    try {
@@ -41,9 +43,64 @@ export const signup=async (req,res)=>{
    }
 };
 
-export const login=(req,res)=>{
-    res.send("this is login")
+export const login=async (req,res)=>{
+   const {email,password}=req.body;
+   try {
+    const user=await User.findOne({email});
+    if(!user){
+        res.status(400).json({message:"Invalid email address"});
+    }
+    const isPasswordCorrect=await bcrypt.compare(password,user.password); //password- UI and user.password- DB
+    if(!isPasswordCorrect){
+        res.status(400).json({message:"Invalid password"});
+    }
+    generateToken(user._id,res);
+    res.status(200).json({
+        _id:user._id,
+        fullname:user.fullname,
+        email:user.email,
+        profilePic:user.profilePic
+    });
+   } catch (error) {
+    console.log("Error in signup",error.message);
+    res.status(500).json({message:"Invalid server Error"})
+   }
 }
 export const logout=(req,res)=>{
-    res.send("this is logout")
+    try {
+        res.cookie("jwt","",{maxAge:0,httpOnly:true});
+        res.status(200).json({message:"Logut successfuly"});
+    } catch (error) {
+        console.log("Error in logout in controller",error.message);
+        res.status(500).json({message:"Internal server Error"});
+    }
 }
+
+export const updateProfile=async (req,res)=>{
+    try {
+        const {profilePic} = req.body;
+        const userId=req.user._id;
+        if(!profilePic){
+            return res.status(400).json({message:"profilePic is required"});
+        }
+        const uploadResponse=await cloudinary.uploader.upload(profilePic);
+        const updateUser=await User.findByIdAndUpdate(userId,
+            {profilePic:uploadResponse.secure_url},{new:true}
+        );
+        res.status(200).json(updateUser);
+
+    } catch (error) {
+        console.log("Error in profilePic",error.message);
+        res.status(500).json({message:"Internal server error"});
+        
+    }
+}
+
+export const checkAuth=(req,res)=>{
+    try {
+        res.status(200).json(req.user);
+    } catch (error) {
+        console.log("Error in checkAuth Controller",error.message);
+        res.status(500).json({message:"Internal server error"});
+    }
+};
