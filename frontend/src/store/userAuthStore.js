@@ -1,6 +1,8 @@
 import {create} from "zustand" //state management library
 import { axiosinstance } from "../lib/axios.js";
 
+
+
 export const useAuthStore=create((set)=>({  //zustand store
     authUser:null,
     isSigningUp:false,
@@ -12,6 +14,7 @@ export const useAuthStore=create((set)=>({  //zustand store
     checkAuth:async()=>{
         try {
             const res=await axiosinstance.get("/auth/check");
+            console.log(res)
             set({authUser:res.data});
 
         } catch (error) {
@@ -19,6 +22,13 @@ export const useAuthStore=create((set)=>({  //zustand store
             set({authUser:null});
         }finally{
             set({isCheckingAuth:false});
+        }
+    },
+    signup:async(data)=>{
+        try {
+            
+        } catch (error) {
+            
         }
     }
 }));
